@@ -22,7 +22,7 @@ jobs:
           version: stable
       - run: forge install foundry-rs/forge-std
       - run: slither contracts/ --exclude-dependencies --json slither-report.json || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: slither-report
           path: slither-report.json
