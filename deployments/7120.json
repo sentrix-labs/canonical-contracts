@@ -1,5 +1,41 @@
 {
   "_chainId": 7120,
   "_network": "Sentrix Testnet",
-  "_note": "Empty until first coordinated deploy. Format per contract: { \"address\": \"0x...\", \"tx\": \"0x...\", \"block\": <int>, \"deployer\": \"0x...\", \"deployed_at\": \"YYYY-MM-DD\" }"
+  "_note": "Canonical contracts deployed via cast send --create (forge script forking blocked by Sentrix RPC strict-decode of sha3Uncles). Deployer: 0x5acb04058fc4dfa258f29ce318282377cac176fd.",
+  "WSRX": {
+    "address": "0x85d5E7694AF31C2Edd0a7e66b7c6c92C59fF949A",
+    "tx": "0xfcfd2e0c1b3b4e61a2166a35cbb780d8370e9d1d6c67f7137aeb66c52260e8b3",
+    "block": 723183,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 4,
+    "deployed_at": "2026-04-27"
+  },
+  "Multicall3": {
+    "address": "0x7900826De548425c6BE56caEbD4760AB0155Cd54",
+    "tx": "0x1f8d6749f7ffdcbbaabfad21167d5133593944be6c59025c69c3f6543cb7f6c2",
+    "block": 723191,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 5,
+    "deployed_at": "2026-04-27",
+    "_note": "Plain CREATE for v1; canonical CREATE2 address 0xcA11bde05977b3631167028862bE2a173976CA11 not used yet."
+  },
+  "TokenFactory": {
+    "address": "0x7A2992af0d4979aDD076347666023d66d29276Fc",
+    "tx": "0xe68e5553af080a97181e09279782873f884477759656e51c03f522c94cb9da47",
+    "block": 723195,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 6,
+    "deployed_at": "2026-04-27"
+  },
+  "SentrixSafe": {
+    "address": "0xc9D7a61D7C2F428F6A055916488041fD00532110",
+    "tx": "0x514863050498a545fa627d696aa82cdd2558bc35470418d7f83af8f1c0a12176",
+    "block": 723511,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 7,
+    "deployed_at": "2026-04-27",
+    "owners": ["0x5acb04058fc4dfa258f29ce318282377cac176fd"],
+    "threshold": 1,
+    "_note": "Bootstrap-mode 1-of-1 with deployer as owner. Transfer to operator multisig owners post-launch via execTransaction(addOwner, removeOwner)."
+  }
 }

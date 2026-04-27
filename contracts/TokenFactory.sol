@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 /// @title Sentrix TokenFactory
+/// @author Sentrix Labs
 /// @notice Deploys standard ERC-20 tokens. Single entry point for builders
 ///         who want a fungible token without writing Solidity. Initial
 ///         supply is minted to the deployer (`msg.sender`).

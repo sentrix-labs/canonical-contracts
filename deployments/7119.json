@@ -1,5 +1,41 @@
 {
   "_chainId": 7119,
   "_network": "Sentrix Mainnet",
-  "_note": "Empty until first coordinated deploy. Format per contract: { \"address\": \"0x...\", \"tx\": \"0x...\", \"block\": <int>, \"deployer\": \"0x...\", \"deployed_at\": \"YYYY-MM-DD\" }"
+  "_note": "Canonical contracts deployed via cast send --create with explicit --nonce per call (forge script forking blocked by Sentrix RPC strict-decode of sha3Uncles; mainnet mempool also enforces strict sequential nonce admission, so each broadcast waited for the prior to mine before sending). Deployer: 0x5acb04058fc4dfa258f29ce318282377cac176fd.",
+  "WSRX": {
+    "address": "0x4693b113e523A196d9579333c4ab8358e2656553",
+    "tx": "0xc5b5016338ba2de65ebb631374724bcc33db63b9a570e77d455d896b40f103fb",
+    "block": 716787,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 0,
+    "deployed_at": "2026-04-27"
+  },
+  "Multicall3": {
+    "address": "0xFd4b34b5763f54a580a0d9f7997A2A993ef9ceE9",
+    "tx": "0x64633e100f952d845970590fda32786118cf5e6b29b56c281d8d1e4b8e889f0a",
+    "block": 717078,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 1,
+    "deployed_at": "2026-04-27",
+    "_note": "Plain CREATE for v1; canonical CREATE2 address 0xcA11bde05977b3631167028862bE2a173976CA11 not used yet."
+  },
+  "TokenFactory": {
+    "address": "0xc753199b723649ab92c6db8A45F158921CFDEe49",
+    "tx": "0xfda6219d60219e223d049158bca734d77e475c0b6b0c02074beeba0c701be112",
+    "block": 717392,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 2,
+    "deployed_at": "2026-04-27"
+  },
+  "SentrixSafe": {
+    "address": "0x6272dC0C842F05542f9fF7B5443E93C0642a3b26",
+    "tx": "0xc67fb31dd135051732a41530e26897fb7c10eaec1fc6cb9334b596073758cb0f",
+    "block": 717618,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 3,
+    "deployed_at": "2026-04-27",
+    "owners": ["0x5acb04058fc4dfa258f29ce318282377cac176fd"],
+    "threshold": 1,
+    "_note": "Bootstrap-mode 1-of-1 with deployer as owner. Transfer to operator multisig owners post-launch via execTransaction(addOwner, removeOwner)."
+  }
 }
