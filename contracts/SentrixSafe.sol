@@ -2,10 +2,11 @@
 pragma solidity 0.8.24;
 
 /// @title SentrixSafe
+/// @author Sentrix Labs
 /// @notice Minimal multi-signature wallet for treasury management.
 /// @dev Inspired by Gnosis Safe v1.4.1 but trimmed to the
 ///      execute-from-N-of-M-owners core. No modules, no guards,
-///      no fallback handlers — those are out of scope for canonical
+///      no fallback handlers - those are out of scope for canonical
 ///      treasury use. Owners sign tx hashes off-chain (EIP-712 typed
 ///      hashing); on-chain `execTransaction` verifies threshold + nonce.
 contract SentrixSafe {

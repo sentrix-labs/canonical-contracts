@@ -2,11 +2,12 @@
 pragma solidity 0.8.24;
 
 /// @title Multicall3
+/// @author Matt Solomon (upstream) - vendored verbatim by Sentrix Labs
 /// @notice Aggregate read/write contract calls into a single tx.
 /// @dev Mirror of github.com/mds1/multicall (canonical address
 ///      0xcA11bde05977b3631167028862bE2a173976CA11 across most chains).
 ///      Reproduced here verbatim to keep the canonical-contracts repo
-///      self-contained. License preserved (MIT — owner: Matt Solomon).
+///      self-contained. License preserved (MIT - owner: Matt Solomon).
 contract Multicall3 {
     struct Call {
         address target;
