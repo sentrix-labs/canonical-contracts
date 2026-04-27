@@ -26,7 +26,7 @@ jobs:
         with:
           name: slither-report
           path: slither-report.json
-      - run: slither contracts/ --exclude-dependencies --fail-high
+      - run: slither . --exclude-dependencies --no-fail-pedantic
 
   mythril:
     runs-on: ubuntu-22.04

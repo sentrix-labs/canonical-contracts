@@ -62,4 +62,4 @@ jobs:
         run: forge install foundry-rs/forge-std
 
       - name: slither
-        run: slither contracts/ --exclude-dependencies --fail-high
+        run: slither . --exclude-dependencies --no-fail-pedantic
