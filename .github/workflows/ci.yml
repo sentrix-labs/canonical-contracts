@@ -23,7 +23,7 @@ jobs:
         run: forge --version
 
       - name: forge install
-        run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+        run: forge install --no-commit foundry-rs/forge-std
 
       - name: forge build
         run: forge build --sizes
@@ -59,7 +59,7 @@ jobs:
           version: stable
 
       - name: forge install
-        run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+        run: forge install --no-commit foundry-rs/forge-std
 
       - name: slither
         run: slither contracts/ --exclude-dependencies --fail-high

@@ -20,7 +20,7 @@ contract TransferOwnership is Script {
     function run() external view {
         address safe = vm.envOr("SAFE_ADDR", address(0));
         if (safe == address(0)) {
-            console2.log("TransferOwnership: SAFE_ADDR not set — skipping.");
+            console2.log("TransferOwnership: SAFE_ADDR not set - skipping.");
             return;
         }
 

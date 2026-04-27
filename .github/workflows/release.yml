@@ -20,7 +20,7 @@ jobs:
           version: stable
 
       - name: forge install
-        run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+        run: forge install --no-commit foundry-rs/forge-std
 
       - name: forge build
         run: forge build --sizes

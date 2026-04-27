@@ -16,11 +16,11 @@ contract LiveNetworkTest is Test {
     function test_wsrx_responds() public {
         address addr = vm.envOr("WSRX_ADDR", address(0));
         if (addr == address(0)) {
-            console2.log("WSRX_ADDR not set — skipping live integration test");
+            console2.log("WSRX_ADDR not set - skipping live integration test");
             return;
         }
         WSRX w = WSRX(payable(addr));
-        // Just call a view; no asserts — point is "doesn't revert"
+        // Just call a view; no asserts - point is "doesn't revert"
         w.totalSupply();
         w.name();
         w.symbol();
@@ -29,7 +29,7 @@ contract LiveNetworkTest is Test {
     function test_multicall3_responds() public {
         address addr = vm.envOr("MULTICALL3_ADDR", address(0));
         if (addr == address(0)) {
-            console2.log("MULTICALL3_ADDR not set — skipping");
+            console2.log("MULTICALL3_ADDR not set - skipping");
             return;
         }
         Multicall3 m = Multicall3(addr);
@@ -39,7 +39,7 @@ contract LiveNetworkTest is Test {
     function test_safe_responds() public {
         address addr = vm.envOr("SAFE_ADDR", address(0));
         if (addr == address(0)) {
-            console2.log("SAFE_ADDR not set — skipping");
+            console2.log("SAFE_ADDR not set - skipping");
             return;
         }
         SentrixSafe s = SentrixSafe(payable(addr));
@@ -49,7 +49,7 @@ contract LiveNetworkTest is Test {
     function test_factory_responds() public {
         address addr = vm.envOr("FACTORY_ADDR", address(0));
         if (addr == address(0)) {
-            console2.log("FACTORY_ADDR not set — skipping");
+            console2.log("FACTORY_ADDR not set - skipping");
             return;
         }
         TokenFactory f = TokenFactory(addr);

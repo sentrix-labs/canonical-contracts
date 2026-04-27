@@ -28,6 +28,6 @@ contract VerifyAll is Script {
         console2.log("Until self-hosted Sourcify lands, run manual verification:");
         console2.log("  forge verify-contract --watch --chain", chainId, "<address> <Contract>");
         console2.log("");
-        console2.log("Skipping JSON parse + endpoint POST — wire up in v2 of this script.");
+        console2.log("Skipping JSON parse + endpoint POST - wire up in v2 of this script.");
     }
 }
