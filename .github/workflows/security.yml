@@ -20,7 +20,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
-      - run: forge install --no-commit foundry-rs/forge-std
+      - run: forge install foundry-rs/forge-std
       - run: slither contracts/ --exclude-dependencies --json slither-report.json || true
       - uses: actions/upload-artifact@v4
         with:

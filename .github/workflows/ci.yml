@@ -23,7 +23,7 @@ jobs:
         run: forge --version
 
       - name: forge install
-        run: forge install --no-commit foundry-rs/forge-std
+        run: forge install foundry-rs/forge-std
 
       - name: forge build
         run: forge build --sizes
@@ -59,18 +59,21 @@ jobs:
           version: stable
 
       - name: forge install
-        run: forge install --no-commit foundry-rs/forge-std
+        run: forge install foundry-rs/forge-std
 
       - name: slither
         run: slither contracts/ --exclude-dependencies --fail-high
 
-  gitleaks:
-    name: gitleaks (secret scan)
+  trufflehog:
+    name: trufflehog (secret scan)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
