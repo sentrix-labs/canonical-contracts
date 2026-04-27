@@ -1,0 +1,42 @@
+{
+  "name": "@sentrix-labs/canonical-contracts",
+  "version": "1.0.0",
+  "description": "Canonical EVM contracts for Sentrix Chain (WSRX, Multicall3, SentrixSafe, TokenFactory). ABI artifacts published for SDK + dApp integration.",
+  "license": "BUSL-1.1",
+  "homepage": "https://github.com/sentrix-labs/canonical-contracts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sentrix-labs/canonical-contracts.git"
+  },
+  "main": "deployments/abi/index.js",
+  "files": [
+    "deployments/",
+    "types/",
+    "contracts/",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "forge build --sizes",
+    "test": "forge test -vvv",
+    "abi": "./script/copy-abi.sh",
+    "typechain": "typechain --target ethers-v6 deployments/abi/*.json --out-dir types/"
+  },
+  "devDependencies": {
+    "@typechain/ethers-v6": "^0.5.1",
+    "typechain": "^8.3.2"
+  },
+  "keywords": [
+    "sentrix",
+    "sentrixchain",
+    "evm",
+    "solidity",
+    "wsrx",
+    "multicall",
+    "safe",
+    "canonical-contracts",
+    "blockchain"
+  ]
+}

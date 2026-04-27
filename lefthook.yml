@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  commands:
+    forge-fmt:
+      glob: "*.sol"
+      run: forge fmt --check {staged_files}
+    solhint:
+      glob: "contracts/**/*.sol"
+      run: solhint {staged_files}
+      fail_text: "solhint violations — fix or override with `--no-verify` (don't)"
+
+commit-msg:
+  commands:
+    no-secrets:
+      run: |
+        if grep -qE "private[_-]key|0x[a-f0-9]{64}" {1}; then
+          echo "❌ commit message looks like it contains a private key — abort."
+          exit 1
+        fi

@@ -1,0 +1,5 @@
+{
+  "_chainId": 7120,
+  "_network": "Sentrix Testnet",
+  "_note": "Empty until first coordinated deploy. Format per contract: { \"address\": \"0x...\", \"tx\": \"0x...\", \"block\": <int>, \"deployer\": \"0x...\", \"deployed_at\": \"YYYY-MM-DD\" }"
+}

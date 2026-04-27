@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: forge install
+        run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+
+      - name: forge build
+        run: forge build --sizes
+
+      - name: forge test
+        run: forge test -vvv
+
+      - name: forge snapshot
+        run: forge snapshot
+        continue-on-error: true
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        run: |
+          tag="${GITHUB_REF##refs/tags/}"
+          version="${tag#v}"
+          awk "/^## \\[${version}\\]/,/^## \\[/" CHANGELOG.md | sed '$d' > release-notes.md || echo "(see CHANGELOG.md)" > release-notes.md
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.notes.outputs.tag }}
+          name: ${{ steps.notes.outputs.tag }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            out/WSRX.sol/WSRX.json
+            out/Multicall3.sol/Multicall3.json
+            out/SentrixSafe.sol/SentrixSafe.json
+            out/TokenFactory.sol/TokenFactory.json

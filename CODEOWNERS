@@ -1,0 +1,15 @@
+# Code owners for canonical-contracts.
+# These owners are auto-requested for review on matching PRs.
+
+# Default owner: core team
+* @sentrix-labs/core-team
+
+# Solidity contracts → security review
+contracts/ @sentrix-labs/security
+contracts/*.sol @sentrix-labs/security
+
+# Deploy scripts → core team (release engineering)
+script/ @sentrix-labs/core-team
+
+# CI configuration → core team
+.github/workflows/ @sentrix-labs/core-team

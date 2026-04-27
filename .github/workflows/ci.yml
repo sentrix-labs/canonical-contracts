@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  forge:
+    name: forge build + test + snapshot
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: forge --version
+        run: forge --version
+
+      - name: forge install
+        run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+
+      - name: forge build
+        run: forge build --sizes
+
+      - name: forge fmt --check
+        run: forge fmt --check
+        continue-on-error: true
+
+      - name: forge test
+        run: forge test -vvv
+
+      - name: forge snapshot (gas report)
+        run: forge snapshot --check || forge snapshot
+        continue-on-error: true
+
+  slither:
+    name: slither (static analysis)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: install slither
+        run: pip install slither-analyzer
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: forge install
+        run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+
+      - name: slither
+        run: slither contracts/ --exclude-dependencies --fail-high
+
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

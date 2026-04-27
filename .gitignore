@@ -1,0 +1,15 @@
+# Foundry
+out/
+cache/
+broadcast/
+
+# Environment — JANGAN PERNAH COMMIT
+.env
+.env.*
+
+# Dependencies
+lib/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,43 @@
+name: Security
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"  # daily 06:00 UTC
+
+jobs:
+  slither:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install slither-analyzer
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - run: forge install --no-commit foundry-rs/forge-std@v1.9.4 || true
+      - run: slither contracts/ --exclude-dependencies --json slither-report.json || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slither-report
+          path: slither-report.json
+      - run: slither contracts/ --exclude-dependencies --fail-high
+
+  mythril:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install mythril
+      - run: |
+          for f in contracts/*.sol; do
+            myth analyze "$f" --solv 0.8.24 --execution-timeout 60 || true
+          done
+        continue-on-error: true

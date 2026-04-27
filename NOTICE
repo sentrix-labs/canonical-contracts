@@ -1,0 +1,19 @@
+Sentrix Canonical Contracts
+Copyright 2026 Sentrix Labs
+
+This product includes software developed by Sentrix Labs, distributed under
+the Business Source License 1.1 (BUSL-1.1) — see LICENSE.
+
+Change Date: 2030-01-01
+On the Change Date, the License terms convert to the Apache License,
+Version 2.0, as published by the Apache Software Foundation.
+
+This product mirrors third-party software:
+  - contracts/Multicall3.sol — verbatim from github.com/mds1/multicall
+    (MIT License, copyright Matt Solomon). License preserved in the
+    file's SPDX header.
+
+Trademark notice: SENTRIX and SENTRIX CHAIN are trademarks of Sentrix
+Labs. Use of these marks in the unmodified canonical contracts is
+permitted under the BUSL-1.1 use grant. Use of the marks in derivative
+works requires written permission.
