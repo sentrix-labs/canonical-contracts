@@ -11,7 +11,7 @@ jobs:
     name: forge build + test + snapshot
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -43,7 +43,7 @@ jobs:
     name: slither (static analysis)
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
