@@ -118,6 +118,11 @@ WSRX_ADDR=0x... MULTICALL3_ADDR=0x... SAFE_ADDR=0x... FACTORY_ADDR=0x... \
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md). PRs welcome — `forge test` + `forge fmt --check` + `slither --fail-high` must pass before merge.
 
+## Community
+
+- **GitHub Discussions** — https://github.com/sentrix-labs/canonical-contracts/discussions for integration questions, contract design feedback, deployment help.
+- **Org profile** — https://github.com/sentrix-labs
+
 ## License
 
 BUSL-1.1 (see [`LICENSE`](LICENSE) + [`NOTICE`](NOTICE)). Change Date: 2030-01-01 → MIT.
