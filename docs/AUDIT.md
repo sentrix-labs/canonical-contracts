@@ -12,21 +12,11 @@
 
 ## External audit plan
 
-**Status:** Engagement targeted for Q2 2026.
-
-**Candidate firms** (selection in progress): Trail of Bits, OpenZeppelin Spearbit, Quantstamp, ConsenSys Diligence, or equivalent tier-1 Solidity auditor.
-
-**Estimated timeline:**
-- Engagement + scope agreement: ~1 week
-- Audit: 3–4 weeks
-- Remediation: 2–3 weeks
-- Re-review + sign-off: 1 week
-
-**Total window: 6–8 weeks** from engagement to public report.
+**Status:** Engagement targeted for Q2 2026 per Sentrix tokenomics roadmap §9. Specific firm selection and audit timeline will be announced when engagement is signed.
 
 **Budget:** Allocated from Sentrix Strategic Reserve (see [tokenomics docs](https://docs.sentrixchain.com/tokenomics/OVERVIEW)).
 
-External audit completion is a **prerequisite for major CEX listings** (tier-1 Indonesian CEXs and international tier-2+).
+External audit completion is a prerequisite for major CEX listings.
 
 ## Pre-audit posture
 
@@ -41,7 +31,7 @@ These contracts are deployed **before** a third-party audit. The chain is curren
 
 CI gates on every PR:
 
-- **`forge test`** — unit + invariant tests (89% line coverage)
+- **`forge test`** — unit + invariant tests
 - **`slither`** — static analyzer with `--fail-high` (blocks merge on high-severity findings)
 - **`mythril`** — symbolic execution (catches reachability + logic errors)
 - **`gitleaks`** — secret scanning
