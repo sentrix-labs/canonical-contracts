@@ -29,7 +29,7 @@ import {Script, console2} from "forge-std/Script.sol";
 ///      It does not perform any on-chain action — the migration is already
 ///      complete.
 contract TransferOwnership is Script {
-    address internal constant AUTHORITY = 0xa25236925Bc10954e0519731cc7ba97F4Bb5714b;
+    address internal constant AUTHORITY = 0xa25236925BC10954e0519731Cc7bA97F4bB5714B;
     address internal constant SAFE_MAINNET = 0x6272dC0C842F05542f9fF7B5443E93C0642a3b26;
     address internal constant SAFE_TESTNET = 0xc9D7a61D7C2F428F6A055916488041fD00532110;
 
