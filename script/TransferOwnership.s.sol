@@ -5,34 +5,47 @@ import {Script, console2} from "forge-std/Script.sol";
 
 /// @title TransferOwnership
 /// @author Sentrix Labs
-/// @notice Hand off contract ownership from the deployer EOA to the
-///         SentrixSafe multisig. Run after the initial deploy so the
-///         deployer key can be retired.
-/// @dev The current canonical set has limited admin surface:
-///      - WSRX: no owner (immutable)
-///      - Multicall3: no owner (immutable)
-///      - TokenFactory: no owner (factory is open-access)
-///      - SentrixSafe: owner-set is governed by the contract itself
-///      So this script is a placeholder until owner-controlled contracts
-///      (e.g., upgradeable proxies, pausable factories) are added in
-///      future releases. Until then it just logs the situation.
+/// @notice Documents the hand-off from the bootstrap deployer EOA to the
+///         Sentrix Labs authority signer for any contract that has an
+///         owner role.
+/// @dev Current canonical set admin surface:
+///      - WSRX:         no owner (immutable)
+///      - Multicall3:   no owner (immutable)
+///      - TokenFactory: no owner (open factory)
+///      - SentrixSafe:  self-governed (owners + threshold via execTransaction)
+///
+///      Migration completed 2026-04-28 (both chains):
+///      Step 1 — addOwner(authority, threshold=1): 1-of-1 deployer → 1-of-2 [deployer, authority].
+///      Step 2 — removeOwner(deployer, threshold=1): 1-of-2 → 1-of-1 [authority].
+///
+///      Final state: SentrixSafe is a 1-of-1 multisig owned by the authority
+///      signer 0xa25236925bc10954e0519731cc7ba97f4bb5714b on both chains
+///      (mainnet 0x6272dC0C842F05542f9fF7B5443E93C0642a3b26 and testnet
+///      0xc9D7a61D7C2F428F6A055916488041fD00532110). The deployer EOA is
+///      retired from Safe ownership; future governance txs must be signed
+///      by the authority key.
+///
+///      This script is read-only and prints the documented final state.
+///      It does not perform any on-chain action — the migration is already
+///      complete.
 contract TransferOwnership is Script {
-    function run() external view {
-        address safe = vm.envOr("SAFE_ADDR", address(0));
-        if (safe == address(0)) {
-            console2.log("TransferOwnership: SAFE_ADDR not set - skipping.");
-            return;
-        }
+    address internal constant AUTHORITY = 0xa25236925Bc10954e0519731cc7ba97F4Bb5714b;
+    address internal constant SAFE_MAINNET = 0x6272dC0C842F05542f9fF7B5443E93C0642a3b26;
+    address internal constant SAFE_TESTNET = 0xc9D7a61D7C2F428F6A055916488041fD00532110;
 
-        console2.log("=== Ownership status (current canonical set) ===");
-        console2.log("Target Safe:", safe);
+    function run() external view {
+        console2.log("=== SentrixSafe ownership (final state, post-2026-04-28 migration) ===");
+        console2.log("Authority signer (sole Safe owner, threshold=1):", AUTHORITY);
+        console2.log("Mainnet Safe (chain 7119):", SAFE_MAINNET);
+        console2.log("Testnet Safe (chain 7120):", SAFE_TESTNET);
         console2.log("");
         console2.log("WSRX:        no owner (immutable, no transfer needed)");
         console2.log("Multicall3:  no owner (immutable, no transfer needed)");
         console2.log("TokenFactory: no owner (open factory, anyone may deploy)");
-        console2.log("SentrixSafe: self-governed (owners + threshold managed via execTransaction)");
+        console2.log("SentrixSafe: 1-of-1 with authority signer");
         console2.log("");
-        console2.log("No on-chain transfer to perform. Update CHANGELOG.md if this");
-        console2.log("changes when a future contract introduces an owner role.");
+        console2.log("Migration is complete on-chain. See docs/ADDRESSES.md for tx hashes.");
+        console2.log("If a future contract introduces an owner role, extend this script");
+        console2.log("to emit the actual transferOwnership(...) calldata for the Safe.");
     }
 }
