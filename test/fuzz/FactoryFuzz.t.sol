@@ -13,7 +13,8 @@ contract FactoryFuzzTest is Test {
 
     function testFuzz_deploy_with_supply(uint256 supply, address owner) public {
         vm.assume(owner != address(0));
-        supply = bound(supply, 0, type(uint128).max);
+        // Floor at 1 — the audit-added ZERO_SUPPLY guard rejects 0.
+        supply = bound(supply, 1, type(uint128).max);
         vm.prank(owner);
         address t = factory.deployToken("FuzzT", "FT", supply);
         FactoryToken ft = FactoryToken(t);

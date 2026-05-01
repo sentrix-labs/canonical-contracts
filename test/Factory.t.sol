@@ -54,4 +54,50 @@ contract FactoryTest is Test {
         t.transferFrom(bob, alice, 50 ether);
         assertEq(t.balanceOf(bob), 50 ether);
     }
+
+    // ── Input-validation tests added 2026-04-30 audit pass ───────────
+
+    function test_deploy_rejects_zero_supply() public {
+        vm.prank(alice);
+        vm.expectRevert(bytes("TokenFactory: ZERO_SUPPLY"));
+        factory.deployToken("X", "X", 0);
+    }
+
+    function test_deploy_rejects_empty_name() public {
+        vm.prank(alice);
+        vm.expectRevert(bytes("TokenFactory: BAD_NAME"));
+        factory.deployToken("", "X", 1);
+    }
+
+    function test_deploy_rejects_empty_symbol() public {
+        vm.prank(alice);
+        vm.expectRevert(bytes("TokenFactory: BAD_SYMBOL"));
+        factory.deployToken("X", "", 1);
+    }
+
+    function test_deploy_rejects_oversize_name() public {
+        // 65-char name (cap is 64)
+        string memory longName = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        vm.prank(alice);
+        vm.expectRevert(bytes("TokenFactory: BAD_NAME"));
+        factory.deployToken(longName, "X", 1);
+    }
+
+    function test_deploy_rejects_oversize_symbol() public {
+        // 17-char symbol (cap is 16)
+        string memory longSym = "AAAAAAAAAAAAAAAAA";
+        vm.prank(alice);
+        vm.expectRevert(bytes("TokenFactory: BAD_SYMBOL"));
+        factory.deployToken("X", longSym, 1);
+    }
+
+    function test_factory_token_transfer_to_zero_reverts() public {
+        vm.prank(alice);
+        address token = factory.deployToken("Test", "TST", 1000 ether);
+        FactoryToken t = FactoryToken(token);
+
+        vm.prank(alice);
+        vm.expectRevert(bytes("FactoryToken: TO_ZERO"));
+        t.transfer(address(0), 1);
+    }
 }

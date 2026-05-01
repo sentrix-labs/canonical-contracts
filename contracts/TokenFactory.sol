@@ -10,9 +10,20 @@ pragma solidity 0.8.24;
 contract TokenFactory {
     event TokenDeployed(address indexed token, address indexed owner, string name, string symbol, uint256 initialSupply);
 
+    /// @dev Caps name/symbol bytes to prevent gas-grief deploys with megabyte
+    ///      strings. Standard ERC20 metadata fits comfortably under both caps.
+    uint256 public constant MAX_NAME_LENGTH = 64;
+    uint256 public constant MAX_SYMBOL_LENGTH = 16;
+
     mapping(address => address[]) public deployedTokens;
 
     function deployToken(string calldata name, string calldata symbol, uint256 initialSupply) external returns (address token) {
+        // Reject silly inputs early — a zero-supply or empty-name token is
+        // never useful and burns gas for everyone indexing the event log.
+        require(initialSupply > 0, "TokenFactory: ZERO_SUPPLY");
+        require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LENGTH, "TokenFactory: BAD_NAME");
+        require(bytes(symbol).length > 0 && bytes(symbol).length <= MAX_SYMBOL_LENGTH, "TokenFactory: BAD_SYMBOL");
+
         FactoryToken t = new FactoryToken(name, symbol, initialSupply, msg.sender);
         token = address(t);
         deployedTokens[msg.sender].push(token);
@@ -71,9 +82,15 @@ contract FactoryToken {
     }
 
     function _transfer(address from, address to, uint256 amount) internal returns (bool) {
+        // ERC-20 spec says transfers to address(0) are not standard burns —
+        // most token contracts revert. Be explicit so wallets that show a
+        // failed tx instead of an unexpected `Transfer(... 0x0 ...)` log.
+        require(to != address(0), "FactoryToken: TO_ZERO");
         require(balanceOf[from] >= amount, "FactoryToken: insufficient balance");
-        balanceOf[from] -= amount;
-        balanceOf[to] += amount;
+        unchecked {
+            balanceOf[from] -= amount;
+            balanceOf[to] += amount;
+        }
         emit Transfer(from, to, amount);
         return true;
     }
