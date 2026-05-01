@@ -34,8 +34,18 @@
     "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
     "deployer_nonce": 7,
     "deployed_at": "2026-04-27",
-    "owners": ["0x5acb04058fc4dfa258f29ce318282377cac176fd"],
+    "owners": [
+      "0x5acb04058fc4dfa258f29ce318282377cac176fd"
+    ],
     "threshold": 1,
     "_note": "Bootstrap-mode 1-of-1 with deployer as owner. Transfer to operator multisig owners post-launch via execTransaction(addOwner, removeOwner)."
+  },
+  "TokenFactory_v1_1_0": {
+    "address": "0xaE2a8512f0de635F8E90069e2877098c9e0baEc7",
+    "tx": "0x119ac2ff65361a36b4a7720b39c8a8bd6d2b2d601fdae480f25c5e250cb3ea9e",
+    "deployed_at": "2026-05-01",
+    "signer_label": "testnet faucet (one-shot deploy gas)",
+    "_changes_vs_v1_0": "input validation (ZERO_SUPPLY/BAD_NAME/BAD_SYMBOL); FactoryToken transfer-to-zero reverts (ERC-20 spec)",
+    "_replaces": "0x7A2992af0d4979aDD076347666023d66d29276Fc"
   }
 }
