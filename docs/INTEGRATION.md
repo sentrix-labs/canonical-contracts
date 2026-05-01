@@ -109,4 +109,4 @@ The SDK will wrap both the EVM stack (eth_*) and the native stack (sentrix_*, RE
 | Balance of EVM ERC-20 | — | `eth_call` `balanceOf(address)` |
 | WSRX balance | — | `eth_call` `balanceOf` (WSRX is EVM ERC-20) |
 
-Native TokenOp tokens (deployed via `POST /tokens/deploy`) are a separate contract surface from EVM tokens. Read about the dual-stack architecture in `~/founder-private/CHAIN_DUAL_STACK_REFERENCE.md` (operator-internal).
+Native TokenOp tokens (deployed via `POST /tokens/deploy`) are a separate contract surface from EVM tokens — see the dual-stack overview in [`sentrix/docs/architecture/EVM.md`](https://github.com/sentrix-labs/sentrix/blob/main/docs/architecture/EVM.md) and [`sentrix/docs/operations/SMART_CONTRACT_GUIDE.md`](https://github.com/sentrix-labs/sentrix/blob/main/docs/operations/SMART_CONTRACT_GUIDE.md) for the public reference. Token-standards comparison: [`sentrix/docs/tokenomics/TOKEN_STANDARDS.md`](https://github.com/sentrix-labs/sentrix/blob/main/docs/tokenomics/TOKEN_STANDARDS.md).

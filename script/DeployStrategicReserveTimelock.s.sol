@@ -60,8 +60,8 @@ contract DeployStrategicReserveTimelock is Script {
         console.log("     --amount-sentri 1050000000000000  # 10.5M SRX");
         console.log("");
         console.log("3. After transfer confirms, RETIRE the Reserve EOA");
-        console.log("   private key. Wipe from keystores. Document on");
-        console.log("   founder-private CANONICAL_ADDRESSES.md as");
+        console.log("   private key. Wipe from keystores. Document the");
+        console.log("   migration in the operator address register as");
         console.log("   'Migrated to StrategicReserveTimelock <address>'.");
         console.log("4. Verify Sourcify: contract source already in");
         console.log("   sentrix-labs/canonical-contracts. Run verify.");
