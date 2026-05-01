@@ -282,7 +282,15 @@ contract CoinBlastCurve {
         graduated = true;
 
         uint256 tokenLiquidity = token.balanceOf(address(this));
-        uint256 srxLiquidity = srxRaised;
+        // Surfaced during testnet smoke 2026-05-01: integer rounding inside
+        // quoteBuy/quoteSell can leave srxRaised a few wei *above* the
+        // actual native balance (the fee math discards sub-wei lossage on
+        // each trade, accumulated). Sourcing srxLiquidity from
+        // address(this).balance avoids router.call{value: srxLiquidity}
+        // reverting with insufficient-native-funds at the very last step.
+        // We still zero srxRaised so any future read sees 0 — the curve
+        // is graduated either way.
+        uint256 srxLiquidity = address(this).balance;
         srxRaised = 0;
 
         // Approve router to pull tokens, then add liquidity. LP receipt is
