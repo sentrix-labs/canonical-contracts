@@ -47,5 +47,29 @@
     "signer_label": "Founder v3 (one-shot deploy gas)",
     "_changes_vs_v1_0": "input validation (ZERO_SUPPLY/BAD_NAME/BAD_SYMBOL); FactoryToken transfer-to-zero reverts (ERC-20 spec)",
     "_replaces": "0xc753199b723649ab92c6db8A45F158921CFDEe49"
+  },
+  "CoinBlastCurve_CBLAST": {
+    "address": "0x7a2992af0d4979add076347666023d66d29276fc",
+    "token": "0xe1d502b93ce492cbde32a369d5393626e38d55a7",
+    "tx": "0x8a988bea192422d8a6bfd8b8b736ec463857f5c2c8fd82c2680e3451819e13af",
+    "block": 1161074,
+    "deployer": "0x5acb04058fc4dfa258f29ce318282377cac176fd",
+    "deployer_nonce": 6,
+    "deployed_at": "2026-05-01",
+    "params": {
+      "name": "CoinBlast Genesis",
+      "symbol": "CBLAST",
+      "curveSupply": "1000000000000000000000000000",
+      "basePriceNum": 1,
+      "basePriceDen": 10000,
+      "kNum": 1,
+      "kDen": 2,
+      "graduationSrxThreshold": "1000000000000000000000",
+      "feeBps": 100,
+      "feeRecipient": "0xeb70fdefd00fdb768dec06c478f450c351499f14",
+      "router": "0xAb67E171c0DE0Cd6dD6fE87E5E399C091F9c9dE8",
+      "wsrx": "0x4693b113e523A196d9579333c4ab8358e2656553"
+    },
+    "_note": "First on-chain CoinBlastCurve launch. P0 = 1e-4 SRX-wei per token-wei (= 0.0001 SRX per whole token), K = 0.5, graduation at 1000 SRX raised. Fees accrue to Ecosystem Fund. Curve address coincidentally equals testnet TokenFactory v1.0.0 — same deployer EOA, deterministic CREATE-from-nonce alignment."
   }
 }
