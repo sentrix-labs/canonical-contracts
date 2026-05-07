@@ -9,6 +9,21 @@ pragma solidity 0.8.24;
 ///      no fallback handlers - those are out of scope for canonical
 ///      treasury use. Owners sign tx hashes off-chain (EIP-712 typed
 ///      hashing); on-chain `execTransaction` verifies threshold + nonce.
+///
+/// SECURITY (audit 2026-05-07 v1.1):
+///   - C1: delegatecall path now properly copies calldata into memory before
+///         the DELEGATECALL opcode. Pre-fix the assembly used `data.offset`
+///         as a memory pointer, but DELEGATECALL reads from MEMORY not
+///         CALLDATA — so owners signed one payload and the contract executed
+///         arbitrary memory bytes (or reverted). FIXED.
+///   - C2: full Safe.t.sol test suite added covering execTransaction,
+///         signature verification, replay, delegatecall, owner management.
+///   - H1: ExecutionFailure now reverts (instead of silently succeeding +
+///         emitting an event) so callers can't be fooled into thinking a
+///         failed treasury op succeeded.
+///   - H2: DOMAIN_SEPARATOR rebuilds on chainid mismatch (replay-safe across
+///         hard forks of the host chain).
+///   - H3: removeOwner enforces threshold ≤ remaining-owners floor.
 contract SentrixSafe {
     // ── Storage ──────────────────────────────────────────────
     address[] public owners;
@@ -17,7 +32,12 @@ contract SentrixSafe {
     uint256 public nonce;
 
     // EIP-712 domain separator
-    bytes32 public immutable DOMAIN_SEPARATOR;
+    /// @dev Audit H2: cached at construction; if `block.chainid` ever differs
+    ///      (i.e. the host chain hard-forks the chainid) we recompute on the
+    ///      fly. The immutable cache stays as the fast path for the 99.99% case.
+    bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
+    uint256 private immutable _CACHED_CHAIN_ID;
+
     bytes32 private constant TX_TYPEHASH = keccak256(
         "SafeTx(address to,uint256 value,bytes data,uint256 operation,uint256 nonce)"
     );
@@ -45,13 +65,36 @@ contract SentrixSafe {
         threshold = _threshold;
         emit ChangedThreshold(_threshold);
 
-        DOMAIN_SEPARATOR = keccak256(
+        _CACHED_CHAIN_ID = block.chainid;
+        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(block.chainid);
+    }
+
+    /// @dev Build the EIP-712 domain separator for a given chain id.
+    ///      Audit H2: previously the constructor-built separator was
+    ///      cached as `immutable`; if the host chain ever changes its
+    ///      chainid (hard fork or re-org) the cached value would be
+    ///      stale and signatures would fail to verify even with the
+    ///      same (chainId, verifyingContract) intent. We rebuild on
+    ///      mismatch.
+    function _buildDomainSeparator(uint256 chainId) private view returns (bytes32) {
+        return keccak256(
             abi.encode(
-                keccak256("EIP712Domain(uint256 chainId,address verifyingContract)"),
-                block.chainid,
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("SentrixSafe")),
+                keccak256(bytes("1.1")),
+                chainId,
                 address(this)
             )
         );
+    }
+
+    /// @notice Public domain separator, recomputed if host chainid drifted.
+    /// @dev Audit H2 fix.
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        if (block.chainid == _CACHED_CHAIN_ID) {
+            return _CACHED_DOMAIN_SEPARATOR;
+        }
+        return _buildDomainSeparator(block.chainid);
     }
 
     // ── Core: execute with N-of-M signatures ─────────────────
@@ -73,9 +116,23 @@ contract SentrixSafe {
         nonce++;
 
         if (operation == 1) {
+            // Audit C1 (CRITICAL, 2026-05-07): pre-fix this assembly used
+            // `data.offset` (a CALLDATA offset) directly as the DELEGATECALL
+            // argsOffset argument, but the DELEGATECALL opcode reads from
+            // MEMORY. Owners signed one payload, the contract executed
+            // arbitrary memory bytes — or reverted. FIX: copy calldata to
+            // a fresh memory region first, then DELEGATECALL points at THAT.
+            //
+            // We use Solidity's standard pattern (`bytes memory`) which
+            // does the calldatacopy + memory layout for free.
+            bytes memory dataMem = data;
             assembly {
-                let dataPtr := add(data.offset, 0)
-                success := delegatecall(gas(), to, dataPtr, data.length, 0, 0)
+                // dataMem layout: [length (32 bytes)][bytes...]
+                // argsOffset = dataMem + 32 (skip length prefix)
+                // argsLength = mload(dataMem)
+                let dataPtr := add(dataMem, 0x20)
+                let dataLen := mload(dataMem)
+                success := delegatecall(gas(), to, dataPtr, dataLen, 0, 0)
             }
         } else {
             (success, ) = to.call{value: value}(data);
@@ -84,7 +141,18 @@ contract SentrixSafe {
         if (success) {
             emit ExecutionSuccess(txHash, nonce - 1);
         } else {
+            // Audit H1 (HIGH): pre-fix this only emitted ExecutionFailure +
+            // returned `false`, so callers using the standard "(bool success
+            // = safe.execTransaction(...))" pattern saw `success = false`
+            // but no revert. A treasury op that failed silently would still
+            // count as "executed" in audit logs — confusing at best.
+            // Now revert with the inner-call's revert reason bubbled up.
             emit ExecutionFailure(txHash, nonce - 1);
+            assembly {
+                let returnSize := returndatasize()
+                returndatacopy(0, 0, returnSize)
+                revert(0, returnSize)
+            }
         }
     }
 
@@ -130,7 +198,7 @@ contract SentrixSafe {
             operation,
             _nonce
         ));
-        return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
+        return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
     }
 
     // ── Receive native SRX ──────────────────────────────────
@@ -153,7 +221,14 @@ contract SentrixSafe {
     function removeOwner(address owner, uint256 _threshold) external {
         require(msg.sender == address(this), "Safe: self-call only");
         require(isOwner[owner], "Safe: not owner");
-        require(owners.length - 1 >= _threshold, "Safe: threshold too high");
+        // Audit H3 (HIGH): minimum-owner floor. Without this, a 1-of-N safe
+        // could remove its only remaining owner and brick itself, OR a
+        // 2-of-2 safe could remove an owner without lowering threshold and
+        // brick itself (threshold > owners.length means no signature set
+        // can verify). require(_threshold <= owners.length - 1) covers it.
+        require(owners.length > 1, "Safe: cannot remove last owner");
+        require(_threshold > 0, "Safe: invalid threshold");
+        require(_threshold <= owners.length - 1, "Safe: threshold too high");
 
         isOwner[owner] = false;
         for (uint256 i = 0; i < owners.length; i++) {
@@ -166,7 +241,6 @@ contract SentrixSafe {
         emit RemovedOwner(owner);
 
         if (_threshold != threshold) {
-            require(_threshold > 0, "Safe: invalid threshold");
             threshold = _threshold;
             emit ChangedThreshold(_threshold);
         }
