@@ -3,6 +3,18 @@ pragma solidity 0.8.24;
 
 import {FactoryToken} from "./TokenFactory.sol";
 
+/// Minimal interface for the Sentrix V2 router/factory at graduation time.
+/// We use these only for read-only checks (audit H5 shadow-pair guard);
+/// the actual addLiquiditySRX call is still done via low-level call so the
+/// router ABI evolves independently.
+interface IRouterMinimal {
+    function factory() external view returns (address);
+}
+
+interface IFactoryMinimal {
+    function getPair(address tokenA, address tokenB) external view returns (address);
+}
+
 /// @title CoinBlastCurve
 /// @author Sentrix Labs
 /// @notice On-chain linear bonding curve for the CoinBlast launchpad. One
@@ -263,7 +275,16 @@ contract CoinBlastCurve {
 
         require(token.transferFrom(msg.sender, address(this), tokensIn), "CoinBlast: TOKEN_TRANSFER_FROM");
         tokensSold -= tokensIn;
-        srxRaised -= (srxNet + fee);
+
+        // Audit H4 (HIGH, 2026-05-07): srxRaised is a derived figure that
+        // can drift from address(this).balance because quoteBuy/quoteSell fee
+        // math truncates sub-wei lossage on each trade. The pre-fix line was
+        // `srxRaised -= (srxNet + fee)` which could underflow → revert →
+        // sells permanently locked until graduation threshold met. Clamp the
+        // debit at zero so the underflow is impossible; address(this).balance
+        // remains the true source of truth for outflows below.
+        uint256 debit = srxNet + fee;
+        srxRaised = srxRaised >= debit ? srxRaised - debit : 0;
 
         if (fee > 0) _safeSendSRX(feeRecipient, fee);
         _safeSendSRX(msg.sender, srxNet);
@@ -279,6 +300,21 @@ contract CoinBlastCurve {
     ///         Sentrix V2 pool and burns the LP forever.
     function graduate() external active nonReentrant {
         if (srxRaised < graduationSrxThreshold) revert NotGraduatable();
+
+        // Audit H5 (HIGH, 2026-05-07): graduate() was unauthenticated and
+        // someone could front-run by pre-creating a (token, wsrx) pair on
+        // the V2 factory with skewed reserves before this call. addLiquidity
+        // would then mint LP at a manipulated ratio, leaking value to whoever
+        // arbitraged the first post-graduation swap. Guard: read the pinned
+        // router's factory, ask if a pair already exists for our (token, wsrx),
+        // and revert if so. This forces the curve to be the SOLE creator of
+        // its launch pair.
+        address factoryAddr = IRouterMinimal(router).factory();
+        require(
+            IFactoryMinimal(factoryAddr).getPair(address(token), wsrx) == address(0),
+            "CoinBlast: PAIR_EXISTS"
+        );
+
         graduated = true;
 
         uint256 tokenLiquidity = token.balanceOf(address(this));
@@ -312,16 +348,9 @@ contract CoinBlastCurve {
         // need the LP amount for the event log.
         (,, uint256 lpBurned) = abi.decode(ret, (uint256, uint256, uint256));
 
-        // Compute the deterministic pair address by reading the factory off the
-        // router. Done after the router call so we know the pair definitely
-        // exists.
-        (bool fOk, bytes memory fRet) = router.staticcall(abi.encodeWithSignature("factory()"));
-        require(fOk, "CoinBlast: FACTORY_LOOKUP");
-        address factoryAddr = abi.decode(fRet, (address));
-        (bool pOk, bytes memory pRet) =
-            factoryAddr.staticcall(abi.encodeWithSignature("getPair(address,address)", address(token), wsrx));
-        require(pOk, "CoinBlast: PAIR_LOOKUP");
-        address pair = abi.decode(pRet, (address));
+        // Compute the pair address by re-using the factory we already
+        // looked up at the H5 guard above (no need for two factory() calls).
+        address pair = IFactoryMinimal(factoryAddr).getPair(address(token), wsrx);
 
         emit Graduated(pair, srxLiquidity, tokenLiquidity, lpBurned);
     }
