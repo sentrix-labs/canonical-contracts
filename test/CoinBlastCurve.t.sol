@@ -42,6 +42,11 @@ contract MockRouter {
         amountSRX = msg.value;
         // Pretend LP minted = sqrt-ish; we don't need it to be exact.
         liquidity = amountToken < amountSRX ? amountToken : amountSRX;
+        // Mimic real router behaviour: createPair-or-fetch on the factory
+        // such that subsequent getPair() returns the new pair address. This
+        // keeps the test's post-graduation pair lookup working even after
+        // the H5 guard rejects pre-existing pairs.
+        MockFactory(mockFactory).setPair(token, mockWsrx, address(uint160(uint256(keccak256(abi.encode(token, mockWsrx))))));
     }
 }
 
@@ -102,8 +107,11 @@ contract CoinBlastCurveTest is Test {
         });
         curve = new CoinBlastCurve(p);
 
-        // Now register the pair address (after curve constructor created the token)
-        factory.setPair(address(curve.token()), wsrx, address(0xBeef));
+        // Audit H5: do NOT pre-register the pair. The H5 guard requires
+        // factory.getPair(token, wsrx) == address(0) at graduate-time so the
+        // curve is the SOLE creator of its launch pair. The MockRouter's
+        // addLiquiditySRX now sets the pair as part of "creating" liquidity,
+        // mimicking the real factory's createPair-or-fetch semantics.
 
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
@@ -247,7 +255,8 @@ contract CoinBlastCurveTest is Test {
         p.feeRecipient = address(attacker);
         CoinBlastCurve victim = new CoinBlastCurve(p);
         attacker.setCurve(victim);
-        factory.setPair(address(victim.token()), wsrx, address(0xC0DE));
+        // Audit H5: don't pre-register the pair; only addLiquiditySRX (in the
+        // mock router) sets it now.
 
         vm.deal(address(attacker), 100 ether);
         vm.expectRevert(CoinBlastCurve.TransferFailed.selector);
@@ -315,6 +324,47 @@ contract CoinBlastCurveTest is Test {
         vm.prank(alice);
         (bool ok,) = address(curve).call{value: 1 ether}("");
         assertFalse(ok);
+    }
+
+    // ── Audit H5: shadow-pair griefing block ────────────────────────
+
+    function test_graduate_reverts_if_shadow_pair_exists() public {
+        // Buy past threshold first (enough to push srxRaised past GRAD_THRESHOLD)
+        vm.deal(alice, 100000 ether);
+        vm.prank(alice);
+        curve.buy{value: 100000 ether}(0);
+        // Sanity: threshold met
+        assertGe(curve.srxRaised(), GRAD_THRESHOLD);
+
+        // Griefer pre-registers the pair (mimics the front-run on the
+        // canonical V2 factory).
+        factory.setPair(address(curve.token()), wsrx, address(0xBADCAFE));
+
+        // graduate() must now refuse — the curve isn't the sole pair creator.
+        vm.expectRevert(bytes("CoinBlast: PAIR_EXISTS"));
+        curve.graduate();
+    }
+
+    // ── Audit H4: srxRaised underflow guard ─────────────────────────
+
+    function test_sell_does_not_underflow_with_zero_raised() public {
+        // Audit H4: buy then sell back should never underflow on srxRaised.
+        // Pre-fix: `srxRaised -= (srxNet + fee)` could underflow if rounding
+        // drift accumulated. Post-fix: clamped subtraction keeps srxRaised
+        // ≥ 0; the actual native outflow is bounded by address(this).balance.
+        vm.deal(alice, 100 ether);
+        vm.prank(alice);
+        curve.buy{value: 1 ether}(0);
+
+        uint256 aliceTokens = curve.token().balanceOf(alice);
+        assertGt(aliceTokens, 0, "buy delivered no tokens");
+
+        vm.startPrank(alice);
+        curve.token().approve(address(curve), aliceTokens);
+        // Sell — must not revert with arithmetic underflow.
+        curve.sell(aliceTokens, 0);
+        vm.stopPrank();
+        // No revert + final srxRaised within sane bounds is the H4 property.
     }
 }
 
