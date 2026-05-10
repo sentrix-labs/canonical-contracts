@@ -9,6 +9,10 @@ broadcast/
 
 # Dependencies
 lib/
+node_modules/
+
+# npm package build outputs (regenerated via `pnpm build` / `prepack`)
+dist/
 
 # OS
 .DS_Store
