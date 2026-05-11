@@ -100,4 +100,28 @@ contract FactoryTest is Test {
         vm.expectRevert(bytes("FactoryToken: TO_ZERO"));
         t.transfer(address(0), 1);
     }
+
+    function test_factory_token_direct_deploy_to_zero_owner_reverts() public {
+        // TokenFactory always passes msg.sender, so this is reachable only
+        // via a direct `new FactoryToken(..., address(0))`. Defense-in-depth.
+        vm.expectRevert(bytes("FactoryToken: OWNER_ZERO"));
+        new FactoryToken("X", "X", 1 ether, address(0));
+    }
+
+    function test_factory_token_transferFrom_emits_approval_on_spend() public {
+        vm.prank(alice);
+        address token = factory.deployToken("Test", "TST", 1000 ether);
+        FactoryToken t = FactoryToken(token);
+
+        vm.prank(alice);
+        t.approve(bob, 500 ether);
+
+        // OZ-style: each spend emits Approval with the remaining allowance.
+        vm.prank(bob);
+        vm.expectEmit(true, true, false, true, address(t));
+        emit FactoryToken.Approval(alice, bob, 400 ether);
+        t.transferFrom(alice, bob, 100 ether);
+
+        assertEq(t.allowance(alice, bob), 400 ether);
+    }
 }
