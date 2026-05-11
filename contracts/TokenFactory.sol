@@ -53,6 +53,10 @@ contract FactoryToken {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
     constructor(string memory _name, string memory _symbol, uint256 _initialSupply, address _owner) {
+        // Defense-in-depth: TokenFactory always passes msg.sender so this
+        // can't trigger via the factory path, but a direct deploy with
+        // _owner=0 would trap the entire supply in the zero address. Reject.
+        require(_owner != address(0), "FactoryToken: OWNER_ZERO");
         name = _name;
         symbol = _symbol;
         totalSupply = _initialSupply;
@@ -75,7 +79,12 @@ contract FactoryToken {
             uint256 allowed = allowance[from][msg.sender];
             if (allowed != type(uint256).max) {
                 require(allowed >= amount, "FactoryToken: insufficient allowance");
-                allowance[from][msg.sender] = allowed - amount;
+                uint256 remaining = allowed - amount;
+                allowance[from][msg.sender] = remaining;
+                // OZ-style: emit Approval on each spend so indexers tracking
+                // allowance state changes (e.g. CoinGecko / explorer ABI
+                // decoders) see the new value without re-reading storage.
+                emit Approval(from, msg.sender, remaining);
             }
         }
         return _transfer(from, to, amount);
