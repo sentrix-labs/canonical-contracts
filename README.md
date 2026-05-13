@@ -18,14 +18,30 @@
 
 ## What's in here
 
+### Deployed on both chains (mainnet 7119 + testnet 7120)
+
 | Contract | Purpose |
 |---|---|
 | [`WSRX`](contracts/WSRX.sol) | Wrapped SRX — ERC-20 (18 decimals) backed 1:1 by native SRX. Lets EVM dApps hold SRX as a token. |
 | [`Multicall3`](contracts/Multicall3.sol) | Standard Multicall3 ([mds1/multicall](https://github.com/mds1/multicall)) for batched read/write calls. |
 | [`SentrixSafe`](contracts/SentrixSafe.sol) | Minimal multi-sig wallet (Gnosis Safe v1.4.1-derived) for treasury management. Currently configured 1-of-1 with the Sentrix Labs authority signer (`0xa25236925bc10954e0519731cc7ba97f4bb5714b`) on both chains — see [`docs/ADDRESSES.md`](docs/ADDRESSES.md#sentrixsafe-ownership). |
-| [`TokenFactory`](contracts/TokenFactory.sol) | Deploys minimal ERC-20 tokens via a single function call. |
+| [`TokenFactory`](contracts/TokenFactory.sol) | Deploys minimal ERC-20 tokens via a single function call. v1 + v1.1.0 both deployed (see addresses doc). |
 
-**Network:** Sentrix Mainnet `7119` + Sentrix Testnet `7120` — see [`docs/ADDRESSES.md`](docs/ADDRESSES.md) for deployed addresses.
+### Deployed on mainnet (7119) only
+
+| Contract | Purpose |
+|---|---|
+| [`CoinBlastCurve`](contracts/CoinBlastCurve.sol) | Bonding-curve token contract. The CBLAST genesis token launched via this curve on 2026-05-01 — first on-chain CoinBlast bonding-curve launch. |
+
+### In-tree but not yet deployed
+
+| Contract | Purpose |
+|---|---|
+| [`CoinBlastFactory`](contracts/CoinBlastFactory.sol) | Launchpad-style factory that spawns new `CoinBlastCurve` instances. Code-complete; deployment gated on the launchpad UX surface landing. |
+| [`MerkleAirdrop`](contracts/MerkleAirdrop.sol) | Merkle-root airdrop distribution contract for the planned eligibility-based SRX drops. Code-complete; deployment gated on the airdrop campaign go-signal. |
+| [`StrategicReserveTimelock`](contracts/StrategicReserveTimelock.sol) | Time-locked treasury vault for the Strategic Reserve allocation. Code-complete; deployment gated on Strategic Reserve EOA → contract migration plan. |
+
+See [`docs/ADDRESSES.md`](docs/ADDRESSES.md) for deployed addresses on each chain.
 
 ## Quickstart
 
