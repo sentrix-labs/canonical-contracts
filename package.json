@@ -1,32 +1,57 @@
 {
   "name": "@sentrix-labs/canonical-contracts",
-  "version": "1.0.0",
-  "description": "Canonical EVM contracts for Sentrix Chain (WSRX, Multicall3, SentrixSafe, TokenFactory). ABI artifacts published for SDK + dApp integration.",
+  "version": "1.1.0",
+  "description": "Canonical EVM contracts for Sentrix Chain (WSRX, Multicall3, SentrixSafe, TokenFactory). Typed ABIs + per-chain address registry for viem / ethers / wagmi.",
   "license": "BUSL-1.1",
   "homepage": "https://github.com/sentrix-labs/canonical-contracts",
   "repository": {
     "type": "git",
     "url": "https://github.com/sentrix-labs/canonical-contracts.git"
   },
-  "main": "deployments/abi/index.js",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./abi/*": "./deployments/abi/*.json",
+    "./deployments/*": "./deployments/*.json",
+    "./package.json": "./package.json"
+  },
   "files": [
+    "dist/",
     "deployments/",
-    "types/",
     "contracts/",
+    "src/",
     "README.md",
     "LICENSE",
     "NOTICE",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "forge build --sizes",
-    "test": "forge test -vvv",
+    "build:sol": "forge build --sizes",
+    "test:sol": "forge test -vvv",
     "abi": "./script/copy-abi.sh",
-    "typechain": "typechain --target ethers-v6 deployments/abi/*.json --out-dir types/"
+    "gen": "node scripts/gen-types.mjs",
+    "build": "pnpm gen && tsup",
+    "typecheck": "tsc --noEmit",
+    "prepack": "pnpm build"
   },
   "devDependencies": {
     "@typechain/ethers-v6": "^0.5.1",
-    "typechain": "^8.3.2"
+    "@types/node": "^25.6.2",
+    "tsup": "^8.3.0",
+    "typechain": "^8.3.2",
+    "typescript": "^6.0.3"
+  },
+  "peerDependenciesMeta": {
+    "viem": {
+      "optional": true
+    }
   },
   "keywords": [
     "sentrix",
@@ -37,6 +62,9 @@
     "multicall",
     "safe",
     "canonical-contracts",
+    "viem",
+    "wagmi",
+    "ethers",
     "blockchain"
   ]
 }

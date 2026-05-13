@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install slither-analyzer
-      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1
         with:
           version: stable
       - run: forge install foundry-rs/forge-std
