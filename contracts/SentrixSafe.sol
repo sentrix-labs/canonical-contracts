@@ -49,6 +49,15 @@ contract SentrixSafe {
     event RemovedOwner(address indexed owner);
     event ChangedThreshold(uint256 threshold);
 
+    // ── Errors (audit 2026-05-13) ────────────────────────────
+    /// @dev Audit M-Safe (MEDIUM): owners sign over `value` but DELEGATECALL
+    ///      ignores msg.value at the opcode level (the executing code runs in
+    ///      this Safe's context with this Safe's balance). Pre-fix the value
+    ///      was silently dropped, so an N-of-M quorum could approve a
+    ///      "send 1 ETH via delegatecall to X" payload, see ExecutionSuccess,
+    ///      and never realise the transfer was a no-op. Reject at exec.
+    error DelegateCallWithValue();
+
     // ── Constructor ──────────────────────────────────────────
     constructor(address[] memory _owners, uint256 _threshold) {
         require(_owners.length > 0, "Safe: no owners");
@@ -115,6 +124,12 @@ contract SentrixSafe {
         checkSignatures(txHash, signatures);
         nonce++;
 
+        // Audit M-Safe (MEDIUM, 2026-05-13): reject the silent-value-drop
+        // class. Owners sign over `value` but DELEGATECALL doesn't transfer.
+        // If the intent was "transfer + delegatecall combined", the caller
+        // should split into two ops (send via call, then delegatecall).
+        if (operation == 1 && value != 0) revert DelegateCallWithValue();
+
         if (operation == 1) {
             // Audit C1 (CRITICAL, 2026-05-07): pre-fix this assembly used
             // `data.offset` (a CALLDATA offset) directly as the DELEGATECALL
@@ -180,6 +195,13 @@ contract SentrixSafe {
             s := calldataload(add(sigPtr, 32))
             v := byte(0, calldataload(add(sigPtr, 64)))
         }
+        // Audit L-Safe (LOW, 2026-05-13): EIP-2 signature malleability.
+        // ecrecover accepts both s and (n-s) as valid for the same message.
+        // Without bounding s, the same approval can be re-encoded into a
+        // distinct 65-byte blob; harmless here (nonce blocks replay) but
+        // hygiene. v must be 27/28; pre-EIP-155 chain-id encoding rejected.
+        require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "Safe: invalid s");
+        require(v == 27 || v == 28, "Safe: invalid v");
         return ecrecover(dataHash, v, r, s);
     }
 
@@ -205,6 +227,11 @@ contract SentrixSafe {
     receive() external payable {}
 
     // ── Owner management (self-call only via execTransaction) ─
+    /// @notice Add a new owner and optionally re-set the threshold.
+    /// @dev Audit L-Safe (LOW, 2026-05-13): must be invoked via
+    ///      execTransaction with operation=Operation.Call (i.e. operation=0);
+    ///      delegatecall self-invocation will fail because msg.sender becomes
+    ///      the owner EOA, not address(this), and the self-call guard rejects.
     function addOwner(address owner, uint256 _threshold) external {
         require(msg.sender == address(this), "Safe: self-call only");
         require(owner != address(0) && !isOwner[owner], "Safe: invalid or existing owner");
@@ -218,6 +245,11 @@ contract SentrixSafe {
         }
     }
 
+    /// @notice Remove an owner and optionally re-set the threshold.
+    /// @dev Audit L-Safe (LOW, 2026-05-13): same call-only constraint as
+    ///      addOwner. Must be invoked via execTransaction with
+    ///      operation=Operation.Call (operation=0); delegatecall would make
+    ///      msg.sender the owner EOA and fail the self-call guard.
     function removeOwner(address owner, uint256 _threshold) external {
         require(msg.sender == address(this), "Safe: self-call only");
         require(isOwner[owner], "Safe: not owner");

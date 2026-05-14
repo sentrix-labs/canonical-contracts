@@ -45,4 +45,21 @@ contract Multicall3Test is Test {
         assertEq(mc.getBlockNumber(), block.number);
         assertEq(mc.getChainId(), block.chainid);
     }
+
+    // Audit L-MC (LOW, 2026-05-13): non-Value variants must reject value.
+    function test_aggregate_rejects_msg_value() public {
+        Multicall3.Call[] memory calls = new Multicall3.Call[](1);
+        calls[0] = Multicall3.Call(address(target), abi.encodeWithSignature("getCounter()"));
+        vm.deal(address(this), 1 ether);
+        vm.expectRevert(bytes("Multicall3: use aggregate3Value to send native"));
+        mc.aggregate{value: 1 ether}(calls);
+    }
+
+    function test_aggregate3_rejects_msg_value() public {
+        Multicall3.Call3[] memory calls = new Multicall3.Call3[](1);
+        calls[0] = Multicall3.Call3(address(target), false, abi.encodeWithSignature("getCounter()"));
+        vm.deal(address(this), 1 ether);
+        vm.expectRevert(bytes("Multicall3: use aggregate3Value to send native"));
+        mc.aggregate3{value: 1 ether}(calls);
+    }
 }

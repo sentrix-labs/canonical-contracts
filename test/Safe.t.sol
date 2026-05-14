@@ -188,6 +188,39 @@ contract SafeTest is Test {
         assertTrue(success);
     }
 
+    // ── Audit M-Safe: delegatecall-with-value rejection ─────
+
+    function test_exec_delegatecall_with_value_reverts() public {
+        // Audit M-Safe (MEDIUM, 2026-05-13): owners can sign over `value` for
+        // a delegatecall payload, but the DELEGATECALL opcode ignores value
+        // (executes in caller's context). Pre-fix the value was silently
+        // dropped → ExecutionSuccess emitted, no transfer, owners think it
+        // worked. Post-fix: explicit revert.
+        DelegateTarget target = new DelegateTarget();
+        bytes32 magic = bytes32(uint256(0xC0FFEE));
+        bytes memory data = abi.encodeCall(DelegateTarget.setHighSlot, (magic));
+
+        bytes32 txHash = safe.getTransactionHash(address(target), 1 ether, data, 1, safe.nonce());
+        bytes memory sigs = _sign2(txHash);
+
+        vm.expectRevert(SentrixSafe.DelegateCallWithValue.selector);
+        safe.execTransaction(address(target), 1 ether, data, 1, sigs);
+        // Whole tx reverted → nonce stays at 0 (storage rolled back).
+        assertEq(safe.nonce(), 0);
+    }
+
+    function test_exec_delegatecall_zero_value_still_works() public {
+        // Sanity: M-Safe rejects only value!=0; the well-trodden delegatecall
+        // path with value=0 must still succeed (regression guard).
+        DelegateTarget target = new DelegateTarget();
+        bytes32 magic = bytes32(uint256(0xBEEF));
+        bytes memory data = abi.encodeCall(DelegateTarget.setHighSlot, (magic));
+        bytes32 txHash = safe.getTransactionHash(address(target), 0, data, 1, safe.nonce());
+        bytes memory sigs = _sign2(txHash);
+        bool success = safe.execTransaction(address(target), 0, data, 1, sigs);
+        assertTrue(success);
+    }
+
     // ── execTransaction failure path — Audit H1 ─────────────
 
     function test_exec_revert_bubbles_inner_call_revert() public {
