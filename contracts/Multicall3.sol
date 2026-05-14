@@ -6,8 +6,16 @@ pragma solidity 0.8.24;
 /// @notice Aggregate read/write contract calls into a single tx.
 /// @dev Mirror of github.com/mds1/multicall (canonical address
 ///      0xcA11bde05977b3631167028862bE2a173976CA11 across most chains).
-///      Reproduced here verbatim to keep the canonical-contracts repo
-///      self-contained. License preserved (MIT - owner: Matt Solomon).
+///      Reproduced here to keep the canonical-contracts repo self-contained.
+///      License preserved (MIT - owner: Matt Solomon).
+///
+///      Audit L-MC (LOW, 2026-05-13): we diverge from upstream by guarding
+///      `aggregate()` and `aggregate3()` with `require(msg.value == 0)`.
+///      Upstream marks both `payable` even though the per-call paths don't
+///      forward value, so any SRX sent in by mistake is stranded inside the
+///      Multicall (it has no withdraw path). The Value variant is the only
+///      legitimate native-bearing entry point. Note: this means the deployed
+///      bytecode no longer matches the canonical 0xcA11... address.
 contract Multicall3 {
     struct Call {
         address target;
@@ -34,6 +42,7 @@ contract Multicall3 {
 
     /// @notice Backwards-compatible aggregate (reverts on any failure).
     function aggregate(Call[] calldata calls) external payable returns (uint256 blockNumber, bytes[] memory returnData) {
+        require(msg.value == 0, "Multicall3: use aggregate3Value to send native");
         blockNumber = block.number;
         uint256 length = calls.length;
         returnData = new bytes[](length);
@@ -49,6 +58,7 @@ contract Multicall3 {
 
     /// @notice Aggregate calls; per-call failure mode controllable.
     function aggregate3(Call3[] calldata calls) external payable returns (Result[] memory returnData) {
+        require(msg.value == 0, "Multicall3: use aggregate3Value to send native");
         uint256 length = calls.length;
         returnData = new Result[](length);
         Call3 calldata calli;
@@ -96,10 +106,12 @@ contract Multicall3 {
     }
 
     function blockAndAggregate(Call[] calldata calls) external payable returns (uint256 blockNumber, bytes32 blockHash, Result[] memory returnData) {
+        require(msg.value == 0, "Multicall3: use aggregate3Value to send native");
         (blockNumber, blockHash, returnData) = tryBlockAndAggregate(calls);
     }
 
     function tryBlockAndAggregate(Call[] calldata calls) public payable returns (uint256 blockNumber, bytes32 blockHash, Result[] memory returnData) {
+        require(msg.value == 0, "Multicall3: use aggregate3Value to send native");
         blockNumber = block.number;
         blockHash = blockhash(block.number);
         uint256 length = calls.length;

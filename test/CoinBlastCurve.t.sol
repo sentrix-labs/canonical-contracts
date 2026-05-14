@@ -244,23 +244,68 @@ contract CoinBlastCurveTest is Test {
 
     // ── Reentrancy ──────────────────────────────────────────────────
 
-    function test_reentrancy_buy_via_recipient_callback() public {
-        // Make the attacker contract BOTH buyer and feeRecipient so the
-        // fee-forward step (always non-zero) triggers receive() — the dust
-        // refund path is unreliable since binary search often lands on
-        // exact-match cost (no dust). Deploy a fresh curve with attacker
-        // as fee recipient.
-        CoinBlastCurve.InitParams memory p = _baseParams();
-        ReentrantBuyer attacker = new ReentrantBuyer(CoinBlastCurve(payable(address(0))));
-        p.feeRecipient = address(attacker);
-        CoinBlastCurve victim = new CoinBlastCurve(p);
-        attacker.setCurve(victim);
-        // Audit H5: don't pre-register the pair; only addLiquiditySRX (in the
-        // mock router) sets it now.
-
+    function test_reentrancy_sell_via_proceeds_callback() public {
+        // Audit M1 (2026-05-13): pre-fix the curve forwarded the fee to the
+        // recipient via .call which gave any malicious recipient a callback
+        // entry into buy()/sell(). Post-fix the fee is accrued (no callback)
+        // so the lock-vs-callback path is now via the seller's receive() on
+        // the sell-proceeds transfer. Verify the lock still trips: the
+        // attacker buys some tokens, then sells, and on receiving the
+        // sell-proceeds tries to re-enter buy() — must revert.
+        ReentrantSeller attacker = new ReentrantSeller(curve);
         vm.deal(address(attacker), 100 ether);
+        attacker.buyFirst(10 ether);
+
+        FactoryToken tok = curve.token();
+        uint256 bal = tok.balanceOf(address(attacker));
+        attacker.approveAll(bal);
+
         vm.expectRevert(CoinBlastCurve.TransferFailed.selector);
-        attacker.attack(10 ether);
+        attacker.sellAndReenter(bal);
+    }
+
+    // ── Audit M1: pull-pattern fee escrow ───────────────────────────
+
+    function test_fee_recipient_revert_does_not_break_buy() public {
+        // M1 (HIGH): a fee recipient that reverts on receive() must NOT be
+        // able to brick the curve. Pre-fix every buy/sell would revert at
+        // the .call{value:fee} step. Post-fix the fee is accrued — recipient
+        // bytecode has no influence on trade success.
+        CoinBlastCurve.InitParams memory p = _baseParams();
+        RevertingRecipient bad = new RevertingRecipient();
+        p.feeRecipient = address(bad);
+        CoinBlastCurve victim = new CoinBlastCurve(p);
+
+        vm.prank(alice);
+        victim.buy{value: 5 ether}(0);
+        // No revert = M1 fix working. Fee accrued for the bad recipient.
+        assertGt(victim.pendingFees(address(bad)), 0);
+    }
+
+    function test_fees_claim_drains_pending() public {
+        // Two buys, then the fee recipient pulls. Balance must equal
+        // pendingFees pre-claim, and pendingFees zero post-claim.
+        vm.prank(alice);
+        curve.buy{value: 5 ether}(0);
+        vm.prank(bob);
+        curve.buy{value: 3 ether}(0);
+
+        uint256 owed = curve.pendingFees(treasury);
+        assertGt(owed, 0);
+
+        uint256 before = treasury.balance;
+        vm.prank(treasury);
+        curve.claimFees();
+        assertEq(treasury.balance - before, owed);
+        assertEq(curve.pendingFees(treasury), 0);
+    }
+
+    function test_fees_claim_zero_reverts() public {
+        // Fresh recipient with no accrual.
+        address fresh = address(0x1234);
+        vm.prank(fresh);
+        vm.expectRevert(CoinBlastCurve.NoFeesToClaim.selector);
+        curve.claimFees();
     }
 
     // ── Graduation ──────────────────────────────────────────────────
@@ -368,11 +413,10 @@ contract CoinBlastCurveTest is Test {
     }
 }
 
-// Helper for the reentrancy test — buys then attempts to re-enter buy()
-// via the fee-recipient callback (curve always forwards a non-zero fee
-// when feeBps > 0, so this path is reliable; the SRX-dust refund path is
-// only triggered when binary search undershoots msg.value).
-contract ReentrantBuyer {
+// Helper: buys then sells, attempting to re-enter buy() via the
+// sell-proceeds callback. Audit M1 made the fee path pull-only, so this
+// is now the canonical reentry surface for sell().
+contract ReentrantSeller {
     CoinBlastCurve curve;
     bool reentered;
 
@@ -380,22 +424,33 @@ contract ReentrantBuyer {
         curve = c;
     }
 
-    function setCurve(CoinBlastCurve c) external {
-        curve = c;
+    function buyFirst(uint256 amount) external {
+        curve.buy{value: amount}(0);
     }
 
-    function attack(uint256 amount) external {
-        curve.buy{value: amount}(0);
+    function approveAll(uint256 amount) external {
+        FactoryToken(curve.token()).approve(address(curve), amount);
+    }
+
+    function sellAndReenter(uint256 tokens) external {
+        curve.sell(tokens, 0);
     }
 
     receive() external payable {
         if (!reentered) {
             reentered = true;
-            // Re-enter with a non-trivial amount so the inner buy() doesn't
-            // bail on ZeroValue before reaching the lock check. The inner
-            // call MUST revert with Reentrancy — that's what propagates back
-            // up as the curve's _safeSendSRX failure.
+            // Re-enter buy() with a non-trivial value. Inner call MUST revert
+            // with Reentrancy — that propagates as the outer curve's
+            // _safeSendSRX failure (TransferFailed).
             curve.buy{value: 1 ether}(0);
         }
+    }
+}
+
+// Helper: fee recipient that always reverts on receive. Pre-M1 this would
+// brick every buy/sell; post-M1 the fee is accrued so trades succeed.
+contract RevertingRecipient {
+    receive() external payable {
+        revert("nope");
     }
 }

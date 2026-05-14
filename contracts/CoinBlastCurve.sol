@@ -82,10 +82,23 @@ contract CoinBlastCurve {
     /// @dev Reentrancy lock — initialised to 1 so the first acquire is cheap.
     uint256 private _locked = 1;
 
+    /// @notice Audit M1 (MEDIUM, 2026-05-13): pull-pattern fee escrow.
+    ///         Pre-fix every buy/sell forwarded the fee directly to
+    ///         `feeRecipient` via .call{value:}. If that recipient ever
+    ///         reverted on receive (contract upgrade, SELFDESTRUCT-then-
+    ///         recreate, or future bug) every trade on this curve would
+    ///         revert forever — per-curve DoS, all trader funds locked.
+    ///         Now we accrue into pendingFees[recipient] and the recipient
+    ///         pulls via claimFees(). Buy/sell paths can no longer be
+    ///         bricked by fee-recipient bytecode.
+    mapping(address => uint256) public pendingFees;
+
     // ── Events ────────────────────────────────────────────────────────
     event Buy(address indexed buyer, uint256 srxIn, uint256 fee, uint256 tokensOut);
     event Sell(address indexed seller, uint256 tokensIn, uint256 fee, uint256 srxOut);
     event Graduated(address indexed pair, uint256 srxLiquidity, uint256 tokenLiquidity, uint256 lpBurned);
+    event FeeAccrued(address indexed recipient, uint256 amount);
+    event FeesClaimed(address indexed recipient, uint256 amount);
 
     // ── Errors ────────────────────────────────────────────────────────
     error AlreadyGraduated();
@@ -97,6 +110,7 @@ contract CoinBlastCurve {
     error Reentrancy();
     error FeeTooHigh();
     error InvalidParams();
+    error NoFeesToClaim();
 
     modifier nonReentrant() {
         if (_locked != 1) revert Reentrancy();
@@ -251,8 +265,8 @@ contract CoinBlastCurve {
         tokensSold += tokensOut;
         srxRaised += (grossPaid - fee);
 
-        // Forward fee to recipient; refund any dust to buyer.
-        if (fee > 0) _safeSendSRX(feeRecipient, fee);
+        // Audit M1: accrue fee for pull (was direct .call); refund dust to buyer.
+        _accrueFee(feeRecipient, fee);
         uint256 refund = msg.value - grossPaid;
         if (refund > 0) _safeSendSRX(msg.sender, refund);
 
@@ -286,11 +300,44 @@ contract CoinBlastCurve {
         uint256 debit = srxNet + fee;
         srxRaised = srxRaised >= debit ? srxRaised - debit : 0;
 
-        if (fee > 0) _safeSendSRX(feeRecipient, fee);
+        // Audit M2 (MEDIUM, 2026-05-13): H4-extended. H4 clamped srxRaised;
+        // this clamps the actual transfer to balance to prevent griefing-DoS
+        // on rounding drift. Adversarial buy/sell sequences can leave
+        // address(this).balance < srxNet+fee by ≤1 wei per trade. Without
+        // this clamp the outer _safeSendSRX would revert and lock sells.
+        // Bound: per-trade drift ≤1 wei, so deficit ≤ historical_trades wei.
+        uint256 available = address(this).balance;
+        if (srxNet + fee > available) {
+            uint256 deficit = srxNet + fee - available;
+            if (srxNet >= deficit) { srxNet -= deficit; }
+            else { fee -= (deficit - srxNet); srxNet = 0; }
+        }
+
+        // Audit M1: accrue fee for pull (was direct .call).
+        _accrueFee(feeRecipient, fee);
         _safeSendSRX(msg.sender, srxNet);
 
         emit Sell(msg.sender, tokensIn, fee, srxNet);
         srxOut = srxNet;
+    }
+
+    // ── Fee escrow (audit M1) ─────────────────────────────────────────
+
+    /// @notice Pull-pattern: fee recipient claims accrued SRX. Anyone can
+    ///         claim their own balance; we don't allow third-party claims so
+    ///         a buggy recipient can't front-run their own withdrawal.
+    function claimFees() external nonReentrant {
+        uint256 amount = pendingFees[msg.sender];
+        if (amount == 0) revert NoFeesToClaim();
+        pendingFees[msg.sender] = 0;
+        _safeSendSRX(msg.sender, amount);
+        emit FeesClaimed(msg.sender, amount);
+    }
+
+    function _accrueFee(address recipient, uint256 amount) internal {
+        if (amount == 0) return;
+        pendingFees[recipient] += amount;
+        emit FeeAccrued(recipient, amount);
     }
 
     // ── Graduation ────────────────────────────────────────────────────
@@ -331,15 +378,23 @@ contract CoinBlastCurve {
 
         // Approve router to pull tokens, then add liquidity. LP receipt is
         // sent to address(0) → permanently locked.
+        //
+        // Audit M3 (MEDIUM, 2026-05-13): the addLiquiditySRX signature is
+        //   (token, amountTokenDesired, amountTokenMin, amountSRXMin, to, deadline)
+        // — pre-fix we passed `tokenLiquidity` as both desired AND min, and
+        // `srxLiquidity` as the SRX min. The H5 guard already proves we are
+        // the SOLE pair creator (factory.getPair == 0), so no prior reserves
+        // exist to manipulate the deposit ratio. Pass `1` for both mins —
+        // any non-zero accepted, no slippage exposure.
         require(token.approve(router, tokenLiquidity), "CoinBlast: APPROVE");
         (bool ok, bytes memory ret) = router.call{value: srxLiquidity}(
             abi.encodeWithSignature(
                 "addLiquiditySRX(address,uint256,uint256,uint256,address,uint256)",
                 address(token),
-                tokenLiquidity,
-                tokenLiquidity, // accept any positive token amount (we control supply)
-                srxLiquidity,    // accept any positive SRX amount (we control raise)
-                address(0xdEaD),  // LP receipt destination — burnt forever
+                tokenLiquidity, // amountTokenDesired
+                uint256(1),     // amountTokenMin (sole LP, no slippage exposure)
+                uint256(1),     // amountSRXMin
+                address(0xdEaD), // LP receipt destination — burnt forever
                 block.timestamp + 1 hours
             )
         );

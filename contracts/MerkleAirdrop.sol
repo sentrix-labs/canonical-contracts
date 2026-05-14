@@ -75,6 +75,15 @@ contract MerkleAirdrop {
     /// @notice Claim airdrop allocation by submitting a merkle proof.
     /// @param amount The allocated amount (in wei) for the calling address.
     /// @param proof Merkle proof showing `(msg.sender, amount)` is in the tree.
+    /// @dev Audit L-MA (LOW, 2026-05-13): single-leaf-per-address precondition.
+    ///      The `claimed[msg.sender]` flag is keyed by address, NOT by leaf
+    ///      hash — so trees containing multiple leaves for the same address
+    ///      (e.g. one per reward tier) will silently allow only the first
+    ///      claim; later tiers are unclaimable. If multi-tier rewards are
+    ///      needed, either deploy one MerkleAirdrop per tier OR re-key the
+    ///      mapping by leaf-hash and adopt a `(address, amount, tier)` leaf
+    ///      encoding. The current Phase 1 (Testnet Heroes) uses one leaf per
+    ///      address so this is the documented contract.
     function claim(uint256 amount, bytes32[] calldata proof) external {
         if (block.timestamp > claimDeadline) revert ClaimWindowClosed();
         if (claimed[msg.sender]) revert AlreadyClaimed();
