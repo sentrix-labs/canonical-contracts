@@ -106,10 +106,12 @@ contract Multicall3 {
     }
 
     function blockAndAggregate(Call[] calldata calls) external payable returns (uint256 blockNumber, bytes32 blockHash, Result[] memory returnData) {
+        require(msg.value == 0, "Multicall3: use aggregate3Value to send native");
         (blockNumber, blockHash, returnData) = tryBlockAndAggregate(calls);
     }
 
     function tryBlockAndAggregate(Call[] calldata calls) public payable returns (uint256 blockNumber, bytes32 blockHash, Result[] memory returnData) {
+        require(msg.value == 0, "Multicall3: use aggregate3Value to send native");
         blockNumber = block.number;
         blockHash = blockhash(block.number);
         uint256 length = calls.length;

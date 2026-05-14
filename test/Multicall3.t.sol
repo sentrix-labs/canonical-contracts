@@ -62,4 +62,22 @@ contract Multicall3Test is Test {
         vm.expectRevert(bytes("Multicall3: use aggregate3Value to send native"));
         mc.aggregate3{value: 1 ether}(calls);
     }
+
+    // CR follow-up 2026-05-14: blockAndAggregate + tryBlockAndAggregate
+    // were also payable. Same guard as aggregate / aggregate3.
+    function test_blockAndAggregate_rejects_msg_value() public {
+        Multicall3.Call[] memory calls = new Multicall3.Call[](1);
+        calls[0] = Multicall3.Call(address(target), abi.encodeWithSignature("getCounter()"));
+        vm.deal(address(this), 1 ether);
+        vm.expectRevert(bytes("Multicall3: use aggregate3Value to send native"));
+        mc.blockAndAggregate{value: 1 ether}(calls);
+    }
+
+    function test_tryBlockAndAggregate_rejects_msg_value() public {
+        Multicall3.Call[] memory calls = new Multicall3.Call[](1);
+        calls[0] = Multicall3.Call(address(target), abi.encodeWithSignature("getCounter()"));
+        vm.deal(address(this), 1 ether);
+        vm.expectRevert(bytes("Multicall3: use aggregate3Value to send native"));
+        mc.tryBlockAndAggregate{value: 1 ether}(calls);
+    }
 }
