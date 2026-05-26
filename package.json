@@ -6,7 +6,7 @@
   "homepage": "https://github.com/sentrix-labs/canonical-contracts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sentrix-labs/canonical-contracts.git"
+    "url": "git+https://github.com/sentrix-labs/canonical-contracts.git"
   },
   "type": "module",
   "main": "./dist/index.cjs",
@@ -37,9 +37,9 @@
     "test:sol": "forge test -vvv",
     "abi": "./script/copy-abi.sh",
     "gen": "node scripts/gen-types.mjs",
-    "build": "pnpm gen && tsup",
-    "typecheck": "tsc --noEmit",
-    "prepack": "pnpm build"
+    "build": "node scripts/gen-types.mjs && tsup && tsc --emitDeclarationOnly --declaration --declarationDir dist",
+    "prepack": "node scripts/gen-types.mjs && tsup && tsc --emitDeclarationOnly --declaration --declarationDir dist",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@typechain/ethers-v6": "^0.5.1",
@@ -66,5 +66,10 @@
     "wagmi",
     "ethers",
     "blockchain"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }
