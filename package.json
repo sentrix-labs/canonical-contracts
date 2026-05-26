@@ -1,6 +1,6 @@
 {
   "name": "@sentrix-labs/canonical-contracts",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Canonical EVM contracts for Sentrix Chain (WSRX, Multicall3, SentrixSafe, TokenFactory). Typed ABIs + per-chain address registry for viem / ethers / wagmi.",
   "license": "BUSL-1.1",
   "homepage": "https://github.com/sentrix-labs/canonical-contracts",

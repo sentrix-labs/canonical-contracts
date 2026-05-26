@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Tag
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-05-26 — one-shot publish pipeline
+
+Build/CI-only release. No contract / ABI / address changes. Same `dist/` shape as v1.1.0 (37 files, ESM + CJS + `.d.ts`).
+
+### Build pipeline (#42)
+
+- **tsup `--dts` disabled** in `tsup.config.ts`. tsup 8.5.1 + TypeScript 6.0.3 hit a `rollup-plugin-dts` upstream gap during `npm publish`. We now emit `.d.ts` via a direct `tsc --emitDeclarationOnly` invocation after tsup produces the JS bundles.
+- **`build` and `prepack` scripts call binaries directly** (`node scripts/gen-types.mjs && tsup && tsc --emitDeclarationOnly --declaration --declarationDir dist`). No `pnpm` in the path, so pnpm 11's build-script approval gate never fires during `npm publish` and `esbuild`'s postinstall isn't blocked.
+- **`repository.url` normalised** to `git+https://...` to silence the `npm pkg fix` warning npm emitted on the v1.1.0 publish.
+
+v1.1.0 needed manual workarounds for both of those compat issues. v1.1.1 is the first one-shot publish (run `npm publish`, get a complete dist + tarball, no manual `tsc` or `tsup` invocation required).
+
 ### Documentation
 
 - **`docs/ADDRESSES.md`** — added "SentrixSafe ownership" section documenting the 2026-04-28 migration history and the final 1-of-1 state.
