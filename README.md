@@ -86,16 +86,32 @@ Full integration guide → [`docs/INTEGRATION.md`](docs/INTEGRATION.md).
 End-to-end runbook: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). High-level flow:
 
 ```bash
+# 1. One-time: import the deployer key into Foundry's encrypted keystore.
+#    Prompts for the key + a passphrase; the key never lands in shell
+#    history, `ps aux`, or this README. Subsequent forge commands
+#    reference the account by name and Foundry prompts for the passphrase
+#    at use time.
+cast wallet import sentrix-deployer --interactive
+
+# 2. Per-network env (RPC URL aliases; safe to commit, no secrets).
 cp .env.example .env
 $EDITOR .env
 
-forge script script/DeployWSRX.s.sol --rpc-url sentrix_testnet --broadcast --private-key $DEPLOYER_PRIVATE_KEY
-forge script script/DeployWSRX.s.sol --rpc-url sentrix_mainnet --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+# 3. Deploy.
+forge script script/DeployWSRX.s.sol --rpc-url sentrix_testnet --broadcast --account sentrix-deployer
+forge script script/DeployWSRX.s.sol --rpc-url sentrix_mainnet --broadcast --account sentrix-deployer
 
-# Update deployments/7119.json + 7120.json + CHANGELOG.md
-# Tag release
+# 4. Update deployments/7119.json + 7120.json + CHANGELOG.md
+# 5. Tag release
 git tag v1.0.0 && git push --tags
 ```
+
+> [!IMPORTANT]
+> Never deploy a production contract using `--private-key $HEX` on the
+> command line. The hex appears in shell history, `ps`, and any CI
+> logs that capture the invocation. Foundry's `cast wallet import` +
+> `--account <name>` keeps the key in `~/.foundry/keystores/` under
+> AES-128-CTR + scrypt and is the safer default.
 
 CI auto-creates a GitHub Release from the CHANGELOG entry.
 
