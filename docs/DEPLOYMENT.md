@@ -5,12 +5,27 @@ Step-by-step for a fresh `vX.Y.Z` deploy.
 ## 1. Prepare environment
 
 ```bash
+# One-time: import the deployer key into Foundry's encrypted keystore.
+# Prompts for the key + a passphrase. Key lands in ~/.foundry/keystores/
+# under AES-128-CTR + scrypt — not in shell history, not in `ps aux`,
+# not in CI logs that capture the invocation.
+cast wallet import sentrix-deployer --interactive
+
+# Per-network env (RPC URL aliases, public addresses, no secrets).
 cp .env.example .env
 $EDITOR .env
-# Fill in DEPLOYER_PRIVATE_KEY (no 0x prefix tolerated by foundry; both forms work)
 ```
 
-`.env` is gitignored. Rotate the deployer key after each release if you suspect exposure.
+`.env` is gitignored. The deployer key never lives in `.env`; it lives
+in the Foundry keystore created above. Rotate by re-running
+`cast wallet import` with a fresh secret + a new account name (or
+delete + re-import the existing name).
+
+> [!IMPORTANT]
+> Never deploy a production contract with `--private-key $HEX` on the
+> command line. The hex appears in shell history, `ps aux`, and any
+> CI log that captures the invocation. The `--account <name>` flow
+> below keeps every command secret-free.
 
 ## 2. Fund the deployer wallet
 
@@ -45,17 +60,17 @@ Must all pass before deploy.
 source .env
 
 forge script script/DeployWSRX.s.sol:DeployWSRX \
-  --rpc-url sentrix_testnet --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+  --rpc-url sentrix_testnet --broadcast --account sentrix-deployer
 
 forge script script/DeployMulticall3.s.sol:DeployMulticall3 \
-  --rpc-url sentrix_testnet --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+  --rpc-url sentrix_testnet --broadcast --account sentrix-deployer
 
 # Safe needs SAFE_OWNERS + SAFE_THRESHOLD env vars set
 forge script script/DeploySafe.s.sol:DeploySafe \
-  --rpc-url sentrix_testnet --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+  --rpc-url sentrix_testnet --broadcast --account sentrix-deployer
 
 forge script script/DeployFactory.s.sol:DeployFactory \
-  --rpc-url sentrix_testnet --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+  --rpc-url sentrix_testnet --broadcast --account sentrix-deployer
 ```
 
 After each deploy, capture: contract address, tx hash, block height, deployer address (the broadcast log prints them).
@@ -64,7 +79,7 @@ After each deploy, capture: contract address, tx hash, block height, deployer ad
 
 ```bash
 forge script script/CheckDeployment.s.sol:CheckDeployment \
-  --rpc-url sentrix_testnet --private-key $DEPLOYER_PRIVATE_KEY
+  --rpc-url sentrix_testnet --account sentrix-deployer
 ```
 
 Should report `OK` for every contract. Any `MISMATCH` or `UNREACHABLE` = stop, investigate before mainnet.
