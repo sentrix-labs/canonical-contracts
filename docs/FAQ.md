@@ -24,7 +24,7 @@ The user-facing implication: avoid working with sub-sentri amounts (< `10^10` we
 
 | Aspect | Native TokenOp | EVM ERC-20 |
 |---|---|---|
-| Where it lives | Sentrix native dispatch (`POST /tokens/deploy`, `TokenOp::Deploy`) | EVM contract storage (revm 37) |
+| Where it lives | Sentrix native dispatch (`POST /tokens/deploy`, `TokenOp::Deploy`) | EVM contract storage (revm 38) |
 | How you deploy | Native tx with `data = TokenOp JSON` | `eth_sendRawTransaction` with EVM bytecode |
 | How you query | REST `/tokens/{contract}/...` | `eth_call` with `balanceOf` etc. |
 | Address scheme | Derived from `tx.txid` (Sentrix-specific) | EVM CREATE/CREATE2 |
